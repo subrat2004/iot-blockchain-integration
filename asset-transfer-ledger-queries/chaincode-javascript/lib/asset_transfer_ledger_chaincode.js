@@ -74,101 +74,103 @@ const {Contract} = require('fabric-contract-api');
 class Chaincode extends Contract {
 
 	// CreateAsset - create a new asset, store into chaincode state
-	async CreateAsset(ctx, assetID, color, size, owner, appraisedValue) {
-		const exists = await this.AssetExists(ctx, assetID);
+	async CreateAsset(ctx, deviceID, time, temp, long, lat) {
+		const exists = await this.AssetExists(ctx, long,lat);
 		if (exists) {
-			throw new Error(`The asset ${assetID} already exists`);
+			throw new Error(`The asset ${deviceID} already exists`);
 		}
 
 		// ==== Create asset object and marshal to JSON ====
 		let asset = {
 			docType: 'asset',
-			assetID: assetID,
-			color: color,
-			size: size,
-			owner: owner,
-			appraisedValue: appraisedValue
+			DeviceID: deviceID,
+			Timestamp: time,
+			temperature: temp,
+			longitude: long,
+			latitude: lat
 		};
 
 
 		// === Save asset to state ===
-		await ctx.stub.putState(assetID, Buffer.from(JSON.stringify(asset)));
-		let indexName = 'color~name';
-		let colorNameIndexKey = await ctx.stub.createCompositeKey(indexName, [asset.color, asset.assetID]);
+		await ctx.stub.putState(deviceID, Buffer.from(JSON.stringify(asset)));
 
-		//  Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the marble.
-		//  Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
-		await ctx.stub.putState(colorNameIndexKey, Buffer.from('\u0000'));
+
+		// let indexName = 'color~name';
+		// let colorNameIndexKey = await ctx.stub.createCompositeKey(indexName, [asset.color, asset.DeviceID]);
+
+		// //  Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the marble.
+		// //  Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
+		// await ctx.stub.putState(colorNameIndexKey, Buffer.from('\u0000'));
 	}
 
 	// ReadAsset returns the asset stored in the world state with given id.
 	async ReadAsset(ctx, id) {
 		const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
 		if (!assetJSON || assetJSON.length === 0) {
-			throw new Error(`Asset ${id} does not exist`);
+			throw new Error(`Device with ${id} does not exist`);
 		}
 
 		return assetJSON.toString();
 	}
 
 	// delete - remove a asset key/value pair from state
-	async DeleteAsset(ctx, id) {
-		if (!id) {
-			throw new Error('Asset name must not be empty');
-		}
+	// async DeleteAsset(ctx, id) {
+	// 	if (!id) {
+	// 		throw new Error('Asset name must not be empty');
+	// 	}
 
-		let exists = await this.AssetExists(ctx, id);
-		if (!exists) {
-			throw new Error(`Asset ${id} does not exist`);
-		}
+	// 	let exists = await this.AssetExists(ctx, id);
+	// 	if (!exists) {
+	// 		throw new Error(`Asset ${id} does not exist`);
+	// 	}
 
-		// to maintain the color~name index, we need to read the asset first and get its color
-		let valAsbytes = await ctx.stub.getState(id); // get the asset from chaincode state
-		let jsonResp = {};
-		if (!valAsbytes) {
-			jsonResp.error = `Asset does not exist: ${id}`;
-			throw new Error(jsonResp);
-		}
-		let assetJSON;
-		try {
-			assetJSON = JSON.parse(valAsbytes.toString());
-		} catch (err) {
-			jsonResp = {};
-			jsonResp.error = `Failed to decode JSON of: ${id}`;
-			throw new Error(jsonResp);
-		}
-		await ctx.stub.deleteState(id); //remove the asset from chaincode state
+	// 	// to maintain the color~name index, we need to read the asset first and get its color
+	// 	let valAsbytes = await ctx.stub.getState(id); // get the asset from chaincode state
+	// 	let jsonResp = {};
+	// 	if (!valAsbytes) {
+	// 		jsonResp.error = `Asset does not exist: ${id}`;
+	// 		throw new Error(jsonResp);
+	// 	}
+	// 	let assetJSON;
+	// 	try {
+	// 		assetJSON = JSON.parse(valAsbytes.toString());
+	// 	} catch (err) {
+	// 		jsonResp = {};
+	// 		jsonResp.error = `Failed to decode JSON of: ${id}`;
+	// 		throw new Error(jsonResp);
+	// 	}
+	// 	await ctx.stub.deleteState(id); //remove the asset from chaincode state
 
-		// delete the index
-		let indexName = 'color~name';
-		let colorNameIndexKey = ctx.stub.createCompositeKey(indexName, [assetJSON.color, assetJSON.assetID]);
-		if (!colorNameIndexKey) {
-			throw new Error(' Failed to create the createCompositeKey');
-		}
-		//  Delete index entry to state.
-		await ctx.stub.deleteState(colorNameIndexKey);
-	}
+	// 	// delete the index
+	// 	let indexName = 'color~name';
+	// 	let colorNameIndexKey = ctx.stub.createCompositeKey(indexName, [assetJSON.color, assetJSON.deviceID]);
+	// 	if (!colorNameIndexKey) {
+	// 		throw new Error(' Failed to create the createCompositeKey');
+	// 	}
+	// 	//  Delete index entry to state.
+	// 	await ctx.stub.deleteState(colorNameIndexKey);
+	// }
 
 	// TransferAsset transfers a asset by setting a new owner name on the asset
-	async TransferAsset(ctx, assetName, newOwner) {
+	// async TransferAsset(ctx, assetName, newOwner) {
 
-		let assetAsBytes = await ctx.stub.getState(assetName);
-		if (!assetAsBytes || !assetAsBytes.toString()) {
-			throw new Error(`Asset ${assetName} does not exist`);
-		}
-		let assetToTransfer = {};
-		try {
-			assetToTransfer = JSON.parse(assetAsBytes.toString()); //unmarshal
-		} catch (err) {
-			let jsonResp = {};
-			jsonResp.error = 'Failed to decode JSON of: ' + assetName;
-			throw new Error(jsonResp);
-		}
-		assetToTransfer.owner = newOwner; //change the owner
+	// 	let assetAsBytes = await ctx.stub.getState(assetName);
+	// 	if (!assetAsBytes || !assetAsBytes.toString()) {
+	// 		throw new Error(`Asset ${assetName} does not exist`);
+	// 	}
+	// 	let assetToTransfer = {};
+	// 	try {
+	// 		assetToTransfer = JSON.parse(assetAsBytes.toString()); //unmarshal
+	// 	} catch (err) {
+	// 		let jsonResp = {};
+	// 		jsonResp.error = 'Failed to decode JSON of: ' + assetName;
+	// 		throw new Error(jsonResp);
+	// 	}
+	// 	assetToTransfer.owner = newOwner; //change the owner
 
-		let assetJSONasBytes = Buffer.from(JSON.stringify(assetToTransfer));
-		await ctx.stub.putState(assetName, assetJSONasBytes); //rewrite the asset
-	}
+	// 	let assetJSONasBytes = Buffer.from(JSON.stringify(assetToTransfer));
+	// 	await ctx.stub.putState(assetName, assetJSONasBytes); //rewrite the asset
+	// }
 
 	// GetAssetsByRange performs a range query based on the start and end keys provided.
 	// Read-only function results are not typically submitted to ordering. If the read-only
@@ -183,8 +185,7 @@ class Chaincode extends Contract {
 		let resultsIterator = await ctx.stub.getStateByRange(startKey, endKey);
 		let results = await this._GetAllResults(resultsIterator, false);
 
-		return JSON.stringify(results);
-	}
+		return JSON.stringify(results);}
 
 	// TransferAssetByColor will transfer assets of a given color to a certain new owner.
 	// Uses a GetStateByPartialCompositeKey (range query) against color~name 'index'.
@@ -226,12 +227,17 @@ class Chaincode extends Contract {
 	// and accepting a single query parameter (owner).
 	// Only available on state databases that support rich query (e.g. CouchDB)
 	// Example: Parameterized rich query
-	async QueryAssetsByOwner(ctx, owner) {
-		let queryString = {};
-		queryString.selector = {};
-		queryString.selector.docType = 'asset';
-		queryString.selector.owner = owner;
-		return await this.GetQueryResultForQueryString(ctx, JSON.stringify(queryString)); //shim.success(queryResults);
+	// async QueryAssetsByOwner(ctx, owner) {
+	// 	let queryString = {};
+	// 	queryString.selector = {};
+	// 	queryString.selector.docType = 'asset';
+	// 	queryString.selector.owner = owner;
+	// 	return await this.GetQueryResultForQueryString(ctx, JSON.stringify(queryString)); //shim.success(queryResults);
+	// }
+	async QueryTempByRange(ctx,start,end){
+		let resultsIterator = await ctx.stub.getStateByRange(start, end);
+		let results = await this._GetAllResults(resultsIterator, false);
+		return JSON.stringify(results);
 	}
 
 	// Example: Ad hoc rich query
@@ -305,9 +311,9 @@ class Chaincode extends Contract {
 	}
 
 	// AssetExists returns true when asset with given ID exists in world state
-	async AssetExists(ctx, assetName) {
+	async AssetExists(ctx, long,lat) { const key = `${long}:${lat}`;
 		// ==== Check if asset already exists ====
-		let assetState = await ctx.stub.getState(assetName);
+		let assetState = await ctx.stub.getState(key);
 		return assetState && assetState.length > 0;
 	}
 
@@ -351,58 +357,18 @@ class Chaincode extends Contract {
 	// InitLedger creates sample assets in the ledger
 	async InitLedger(ctx) {
 		const assets = [
-			{
-				assetID: 'asset1',
-				color: 'blue',
-				size: 5,
-				owner: 'Tom',
-				appraisedValue: 100
-			},
-			{
-				assetID: 'asset2',
-				color: 'red',
-				size: 5,
-				owner: 'Brad',
-				appraisedValue: 100
-			},
-			{
-				assetID: 'asset3',
-				color: 'green',
-				size: 10,
-				owner: 'Jin Soo',
-				appraisedValue: 200
-			},
-			{
-				assetID: 'asset4',
-				color: 'yellow',
-				size: 10,
-				owner: 'Max',
-				appraisedValue: 200
-			},
-			{
-				assetID: 'asset5',
-				color: 'black',
-				size: 15,
-				owner: 'Adriana',
-				appraisedValue: 250
-			},
-			{
-				assetID: 'asset6',
-				color: 'white',
-				size: 15,
-				owner: 'Michel',
-				appraisedValue: 250
-			},
+			{ 	DeviceID: 1,	 	Timestamp: 0, 	temperature: 9.00,	longitude: 56.60331205,	latitude : 13.58661874
+			}
 		];
 
 		for (const asset of assets) {
 			await this.CreateAsset(
 				ctx,
-				asset.assetID,
-				asset.color,
-				asset.size,
-				asset.owner,
-				asset.appraisedValue
+				asset.DeviceIDeviceID,
+				asset.Timestamp,
+				asset.temperature,
+				asset.longitude,
+				asset.latitude
 			);
 		}
 	}
