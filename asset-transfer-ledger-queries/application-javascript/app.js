@@ -161,14 +161,37 @@ async function main() {
 			console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID(asset7), color(yellow), size(5), owner(Tom), and appraisedValue(1300) arguments');
 			await contract.submitTransaction('CreateAsset', 2, 0, 5.344, 123.434, 34.232);
 			console.log('*** Result: committed');
+			const latitudeValues = [12.345, 23.456, 34.567, 45.678, 56.789, 67.890, 78.901, 89.012, 90.123, 11.111];
+			const longitudeValues = [98.765, 87.654, 76.543, 65.432, 54.321, 43.210, 32.109, 21.098, 10.987, 22.222];
+			const temperatureValues = [25, 26, 27, 28, 29, 30, 31, 32, 33, 34];
 
-			console.log('\n--> Evaluate Transaction: ReadAsset, function returns information about an asset with ID(asset7)');
-			result = await contract.evaluateTransaction('ReadAsset', 2);
+			for (let i = 0; i < 10; i++) {
+				try {
+					console.log(`\n--> Submit Transaction: CreateAsset, creates new asset with latitude(${i+2},${i+2},${latitudeValues[i]}), longitude(${longitudeValues[i]}), and temperature(${temperatureValues[i]})`);
+					await contract.submitTransaction('CreateAsset',i+2, i+2, latitudeValues[i], longitudeValues[i], temperatureValues[i]);
+					console.log('*** Result: committed');
+				} catch (error) {
+					console.error(`*** Error creating asset: ${error}`);
+				}
+			}
+			// Call GetLast10DataPoints function
+			// console.log('\n--> Evaluate Transaction: GetLast10DataPoints, function returns the last 10 data points recorded');
+			// result = await contract.evaluateTransaction('GetLast10DataPoints');
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// console.log('\n-->Evaluate transaction: Getalldatapoints,function reutrn all data');
+			// result = await contract.evaluateTransaction('GetStoredDataPoints');
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// result=await contract.evaluateTransaction('queryAsset',2,2);
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			result=await contract.evaluateTransaction('QueryLastFiveDataPoints');
 			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// console.log('\n--> Evaluate Transaction: ReadAsset, function returns information about an asset with ID(asset7)');
+			// result = await contract.evaluateTransaction('ReadAsset', 2);
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
-			console.log('\n--> Evaluate Transaction: AssetExists, function returns "true" if an asset with ID(asset7) exist');
-			result = await contract.evaluateTransaction('AssetExists', 123.434,34.232);
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// console.log('\n--> Evaluate Transaction: AssetExists, function returns "true" if an asset with ID(asset7) exist');
+			// result = await contract.evaluateTransaction('AssetExists', 123.434,34.232);
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
 			// Now let's try to submit a transaction that deletes an asset
 			// This will be sent to both peers and if both peers endorse the transaction, the endorsed proposal will be sent
@@ -185,9 +208,9 @@ async function main() {
 			// await contract.submitTransaction('TransferAsset', 'asset2', 'Max');
 			// console.log('*** Result: committed');
 
-			console.log('\n--> Evaluate Transaction: ReadAsset, function returns information about an asset with ID(asset2)');
-			result = await contract.evaluateTransaction('ReadAsset', 2);
-			console.log(`*** Result: ${prettyJSONString(result.toString())}`);
+			// console.log('\n--> Evaluate Transaction: ReadAsset, function returns information about an asset with ID(asset2)');
+			// result = await contract.evaluateTransaction('ReadAsset', 2);
+			// console.log(`*** Result: ${prettyJSONString(result.toString())}`);
 
 			// // Rich Query with Pagination (Only supported if CouchDB is used as state database)
 			// console.log('\n--> Evaluate Transaction: QueryAssetsWithPagination, function returns "Max" assets');

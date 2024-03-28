@@ -104,13 +104,127 @@ class Chaincode extends Contract {
 	}
 
 	// ReadAsset returns the asset stored in the world state with given id.
-	async ReadAsset(ctx, id) {
-		const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
-		if (!assetJSON || assetJSON.length === 0) {
-			throw new Error(`Device with ${id} does not exist`);
+	// async ReadAsset(ctx, id) {
+	// 	const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
+	// 	if (!assetJSON || assetJSON.length === 0) {
+	// 		throw new Error(`Device with ${id} does not exist`);
+	// 	}
+
+	// 	return assetJSON.toString();
+	// }
+	async QueryLastFiveDataPoints(ctx) {
+		// Define the selector for the query
+		const selector = {
+			selector: {
+				docType: 'asset' // Assuming the document type is "asset"
+			},
+			limit: 5, // Limit the result to 5 data points
+			sort: [{ Timestamp: 'asc' }] // Sort the result by timestamp in descending order
+		};
+
+
+		// Perform the query
+		const queryIterator = await ctx.stub.getQueryResult(JSON.stringify(selector));
+
+		// Initialize an array to hold the results
+		const results = [];
+
+		// Iterate through the query results
+		const res=await queryIterator.next();
+		if(res.done){
+			await queryIterator.close();
+		} const asset=JSON.parse(res.value.value.toString('utf8'));
+		results.push(asset);
+
+		// Print the results
+		console.log('Last 5 Data Points:');
+		console.log(results);
+
+		return results;
+	}
+
+	async queryAsset(ctx, deviceID, timestamp) {
+		const key = `${deviceID},${timestamp}`;
+
+		// Retrieve asset from CouchDB using the composite key
+		let assetBytes = await ctx.stub.getState(key);
+		if (!assetBytes || assetBytes.length === 0) {
+			throw new Error(`Asset with key ${key} does not exist`);
+		}
+		let asset = JSON.parse(assetBytes.toString());
+		return asset;
+	}
+	async  GetLast10DataPoints(ctx) {
+		try {
+			// Query CouchDB to get the last 10 documents sorted by timestamp
+			const queryResponse = await ctx.stub.getQueryResultWithPagination(
+				'{"selector":{"docType":"asset"},"limit":10}'
+			);
+
+			const lastTenDataPoints = [];
+
+			// Iterate through the results and parse the documents
+			for  (const { value } of queryResponse) {
+				const asset = JSON.parse(value.toString('utf-8'));
+				lastTenDataPoints.push(asset);
+			}
+
+			return lastTenDataPoints;
+		} catch (error) {
+			console.error(`Failed to fetch last 10 data points: ${error}`);
+			throw new Error('Failed to fetch last 10 data points');
+		}
+	}
+	async GetStoredDataPoints(ctx) {
+		try {
+		// Define a query to retrieve all assets from CouchDB
+			const query = {
+				selector: {
+					docType: 'asset'
+				}
+			};
+
+			// Execute the query to fetch all assets
+			const iterator = await ctx.stub.getState(JSON.stringify(query));
+
+			// Initialize an array to store the retrieved data points
+			const dataPoints = [];
+
+			// Iterate through the results and parse the documents
+			let response;
+			while ((response = await iterator.next())) {
+				if (response && response.value && response.value.value.toString()) {
+					const asset = JSON.parse(response.value.value.toString('utf8'));
+					dataPoints.push(asset);
+				}
+			}
+
+
+			await iterator.close();
+
+			// Return the retrieved data points in JSON format
+			return dataPoints;
+		} catch (error) {
+			console.error(`Failed to fetch stored data points: ${error}`);
+			throw new Error('Failed to fetch stored data points');
+		}
+	}
+
+	async CheckDataPoint(ctx, temperature, longitude, latitude) {
+		const key = `${longitude}:${latitude}`;
+		const assetState = await ctx.stub.getState(key);
+
+		if (!assetState || assetState.length === 0) {
+			return false;
 		}
 
-		return assetJSON.toString();
+		const assets = JSON.parse(assetState.toString());
+		for (const asset of assets) {
+			if (asset.temperature === temperature) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// delete - remove a asset key/value pair from state
@@ -180,12 +294,12 @@ class Chaincode extends Contract {
 	// invalidated by the committing peers if the result set has changed between endorsement
 	// time and commit time.
 	// Therefore, range queries are a safe option for performing update transactions based on query results.
-	async GetAssetsByRange(ctx, startKey, endKey) {
+	// async GetAssetsByRange(ctx, startKey, endKey) {
 
-		let resultsIterator = await ctx.stub.getStateByRange(startKey, endKey);
-		let results = await this._GetAllResults(resultsIterator, false);
+	// 	let resultsIterator = await ctx.stub.getStateByRange(startKey, endKey);
+	// 	let results = await this._GetAllResults(resultsIterator, false);
 
-		return JSON.stringify(results);}
+	// 	return JSON.stringify(results);}
 
 	// TransferAssetByColor will transfer assets of a given color to a certain new owner.
 	// Uses a GetStateByPartialCompositeKey (range query) against color~name 'index'.
@@ -194,33 +308,33 @@ class Chaincode extends Contract {
 	// committing peers if the result set has changed between endorsement time and commit time.
 	// Therefore, range queries are a safe option for performing update transactions based on query results.
 	// Example: GetStateByPartialCompositeKey/RangeQuery
-	async TransferAssetByColor(ctx, color, newOwner) {
-		// Query the color~name index by color
-		// This will execute a key range query on all keys starting with 'color'
-		let coloredAssetResultsIterator = await ctx.stub.getStateByPartialCompositeKey('color~name', [color]);
+	// async TransferAssetByColor(ctx, color, newOwner) {
+	// 	// Query the color~name index by color
+	// 	// This will execute a key range query on all keys starting with 'color'
+	// 	let coloredAssetResultsIterator = await ctx.stub.getStateByPartialCompositeKey('color~name', [color]);
 
-		// Iterate through result set and for each asset found, transfer to newOwner
-		let responseRange = await coloredAssetResultsIterator.next();
-		while (!responseRange.done) {
-			if (!responseRange || !responseRange.value || !responseRange.value.key) {
-				return;
-			}
+	// 	// Iterate through result set and for each asset found, transfer to newOwner
+	// 	let responseRange = await coloredAssetResultsIterator.next();
+	// 	while (!responseRange.done) {
+	// 		if (!responseRange || !responseRange.value || !responseRange.value.key) {
+	// 			return;
+	// 		}
 
-			let objectType;
-			let attributes;
-			(
-				{objectType, attributes} = await ctx.stub.splitCompositeKey(responseRange.value.key)
-			);
+	// 		let objectType;
+	// 		let attributes;
+	// 		(
+	// 			{objectType, attributes} = await ctx.stub.splitCompositeKey(responseRange.value.key)
+	// 		);
 
-			console.log(objectType);
-			let returnedAssetName = attributes[1];
+	// 		console.log(objectType);
+	// 		let returnedAssetName = attributes[1];
 
-			// Now call the transfer function for the found asset.
-			// Re-use the same function that is used to transfer individual assets
-			await this.TransferAsset(ctx, returnedAssetName, newOwner);
-			responseRange = await coloredAssetResultsIterator.next();
-		}
-	}
+	// 		// Now call the transfer function for the found asset.
+	// 		// Re-use the same function that is used to transfer individual assets
+	// 		await this.TransferAsset(ctx, returnedAssetName, newOwner);
+	// 		responseRange = await coloredAssetResultsIterator.next();
+	// 	}
+	// }
 
 	// QueryAssetsByOwner queries for assets based on a passed in owner.
 	// This is an example of a parameterized query where the query logic is baked into the chaincode,
@@ -234,11 +348,11 @@ class Chaincode extends Contract {
 	// 	queryString.selector.owner = owner;
 	// 	return await this.GetQueryResultForQueryString(ctx, JSON.stringify(queryString)); //shim.success(queryResults);
 	// }
-	async QueryTempByRange(ctx,start,end){
-		let resultsIterator = await ctx.stub.getStateByRange(start, end);
-		let results = await this._GetAllResults(resultsIterator, false);
-		return JSON.stringify(results);
-	}
+	// async QueryTempByRange(ctx,start,end){
+	// 	let resultsIterator = await ctx.stub.getStateByRange(start, end);
+	// 	let results = await this._GetAllResults(resultsIterator, false);
+	// 	return JSON.stringify(results);
+	// }
 
 	// Example: Ad hoc rich query
 	// QueryAssets uses a query string to perform a query for assets.
@@ -246,9 +360,9 @@ class Chaincode extends Contract {
 	// Supports ad hoc queries that can be defined at runtime by the client.
 	// If this is not desired, follow the QueryAssetsForOwner example for parameterized queries.
 	// Only available on state databases that support rich query (e.g. CouchDB)
-	async QueryAssets(ctx, queryString) {
-		return await this.GetQueryResultForQueryString(ctx, queryString);
-	}
+	// async QueryAssets(ctx, queryString) {
+	// 	return await this.GetQueryResultForQueryString(ctx, queryString);
+	// }
 
 	// GetQueryResultForQueryString executes the passed in query string.
 	// Result set is built and returned as a byte array containing the JSON results.
