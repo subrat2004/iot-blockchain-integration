@@ -12,3 +12,10 @@ package-lock.json
 
 wallet
 !wallet/.gitkeep
+
+app.js
+connection.js
+index.html
+index1.html
+notification.js
+server.js

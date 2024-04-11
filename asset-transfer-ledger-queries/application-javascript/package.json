@@ -14,8 +14,13 @@
         "lint": "eslint *.js"
     },
     "dependencies": {
+        "dotenv": "^16.4.5",
+        "ejs": "^3.1.9",
+        "express": "^4.19.2",
         "fabric-ca-client": "^2.2.19",
-        "fabric-network": "^2.2.19"
+        "fabric-network": "^2.2.19",
+        "node-fetch": "^3.3.2",
+        "nodemailer": "^6.9.13"
     },
     "devDependencies": {
         "eslint": "^7.32.0"
